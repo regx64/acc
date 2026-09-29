@@ -14,6 +14,8 @@ pub struct Config {
     /// by path instead of being sent inline.
     pub judge_cache_dir: Option<PathBuf>,
     pub worker_id: String,
+    /// Submissions judged at the same time. Keep at or below go-judge's parallelism.
+    pub concurrency: usize,
     pub alert_webhook: Option<String>,
 }
 
@@ -36,6 +38,11 @@ impl Config {
                 .filter(|s| !s.is_empty())
                 .map(Into::into),
             worker_id: std::env::var("WORKER_ID").unwrap_or_else(|_| "worker-1".into()),
+            concurrency: std::env::var("WORKER_CONCURRENCY")
+                .ok()
+                .and_then(|v| v.parse().ok())
+                .filter(|&n: &usize| n >= 1)
+                .unwrap_or(2),
             alert_webhook: std::env::var("ALERT_WEBHOOK_URL")
                 .ok()
                 .filter(|s| !s.is_empty()),

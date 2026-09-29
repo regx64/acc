@@ -71,13 +71,21 @@ pub async fn refresh_user_problem(
 }
 
 /// Recomputes rating and tier from the levels of solved public problems.
+///
+/// The user row is locked first, so concurrent recomputes for one user run
+/// one after another and the last one sees every committed result.
 pub async fn recompute_rating(db: &PgPool, user_id: i64) -> anyhow::Result<(i64, u8)> {
+    let mut tx = db.begin().await?;
+    sqlx::query("SELECT 1 FROM users WHERE id = $1 FOR UPDATE")
+        .bind(user_id)
+        .execute(&mut *tx)
+        .await?;
     let levels: Vec<i16> = sqlx::query_scalar(
         "SELECT p.level FROM user_problem up JOIN problems p ON p.id = up.problem_id
          WHERE up.user_id = $1 AND up.state = 'SOLVED' AND p.status = 'PUBLIC'",
     )
     .bind(user_id)
-    .fetch_all(db)
+    .fetch_all(&mut *tx)
     .await?;
     let rating = level::rating(levels.into_iter().map(|l| l.clamp(0, 30) as u8));
     let tier = level::tier(rating);
@@ -85,8 +93,9 @@ pub async fn recompute_rating(db: &PgPool, user_id: i64) -> anyhow::Result<(i64,
         .bind(user_id)
         .bind(rating as i32)
         .bind(i16::from(tier))
-        .execute(db)
+        .execute(&mut *tx)
         .await?;
+    tx.commit().await?;
     Ok((rating, tier))
 }
 

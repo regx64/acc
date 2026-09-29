@@ -36,7 +36,7 @@ services:
     privileged: true
     shm_size: 1g
     environment:
-      ES_PARALLELISM: ${JUDGE_PARALLELISM:-2}
+      ES_PARALLELISM: ${JUDGE_PARALLELISM:-3}
     volumes: ["cache:/var/cache/acc:ro"]
     restart: unless-stopped
 
@@ -57,6 +57,8 @@ services:
       GO_JUDGE_PATH: /usr/local/rust-bin:/usr/local/bin:/usr/bin:/bin
       CACHE_DIR: /var/cache/acc
       JUDGE_CACHE_DIR: /var/cache/acc
+      # One slot per sandbox; the fourth core stays with the API and Postgres.
+      WORKER_CONCURRENCY: ${JUDGE_PARALLELISM:-3}
     volumes: ["cache:/var/cache/acc"]
     depends_on:
       postgres: {condition: service_healthy}

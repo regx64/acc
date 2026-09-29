@@ -28,7 +28,7 @@ use crate::config::Config;
 struct Worker {
     cfg: Config,
     db: PgPool,
-    redis: ConnectionManager,
+    redis_client: redis::Client,
     judge: GoJudge,
     cache: TestcaseCache,
     http: reqwest::Client,
@@ -44,31 +44,24 @@ async fn main() -> anyhow::Result<()> {
 
     let cfg = Config::from_env()?;
     let db = PgPoolOptions::new()
-        .max_connections(4)
+        .max_connections(cfg.concurrency as u32 + 2)
         .connect(&cfg.database_url)
         .await
         .context("connecting to postgres")?;
-    // BLMOVE blocks for a while, so the response timeout must be longer.
-    let redis = redis::Client::open(cfg.redis_url.as_str())?
-        .get_connection_manager_with_config(
-            redis::aio::ConnectionManagerConfig::new()
-                .set_response_timeout(Some(Duration::from_secs(10))),
-        )
-        .await
-        .context("connecting to redis")?;
+    let redis_client = redis::Client::open(cfg.redis_url.as_str())?;
     let store = acc_core::storage::from_url(&cfg.storage_url)?;
     let judge = GoJudge::new(cfg.judge.clone());
     wait_for_judge(&judge).await;
 
     let cache = TestcaseCache::new(cfg.cache_dir.clone(), cfg.judge_cache_dir.clone(), store);
-    let worker = Worker {
+    let worker = Arc::new(Worker {
         cfg,
         db,
-        redis,
+        redis_client,
         judge,
         cache,
         http: reqwest::Client::new(),
-    };
+    });
 
     let stop = Arc::new(AtomicBool::new(false));
     {
@@ -80,9 +73,19 @@ async fn main() -> anyhow::Result<()> {
         });
     }
 
-    worker.requeue_orphans().await?;
-    info!(worker = %worker.cfg.worker_id, "worker started");
-    worker.run(stop).await;
+    // Each slot judges one submission at a time on its own Redis connection
+    // (BLMOVE blocks the connection it runs on) and its own processing list.
+    let mut slots = Vec::new();
+    for slot in 0..worker.cfg.concurrency {
+        let conn = worker.connect().await?;
+        worker.requeue_orphans(conn.clone(), slot).await?;
+        let (w, stop) = (worker.clone(), stop.clone());
+        slots.push(tokio::spawn(async move { w.run(conn, slot, stop).await }));
+    }
+    info!(worker = %worker.cfg.worker_id, slots = worker.cfg.concurrency, "worker started");
+    for s in slots {
+        let _ = s.await;
+    }
     info!("worker stopped");
     Ok(())
 }
@@ -118,17 +121,27 @@ async fn shutdown_signal() {
 }
 
 impl Worker {
-    fn processing_key(&self) -> String {
-        queue::processing(&self.cfg.worker_id)
+    fn processing_key(&self, slot: usize) -> String {
+        queue::processing(&format!("{}-{slot}", self.cfg.worker_id))
     }
 
-    /// Puts back jobs this worker held when it last died.
-    async fn requeue_orphans(&self) -> anyhow::Result<()> {
-        let mut r = self.redis.clone();
+    async fn connect(&self) -> anyhow::Result<ConnectionManager> {
+        // BLMOVE blocks for a while, so the response timeout must be longer.
+        self.redis_client
+            .get_connection_manager_with_config(
+                redis::aio::ConnectionManagerConfig::new()
+                    .set_response_timeout(Some(Duration::from_secs(10))),
+            )
+            .await
+            .context("connecting to redis")
+    }
+
+    /// Puts back jobs this slot held when the worker last died.
+    async fn requeue_orphans(&self, mut r: ConnectionManager, slot: usize) -> anyhow::Result<()> {
         loop {
             let moved: Option<String> = r
                 .lmove(
-                    self.processing_key(),
+                    self.processing_key(slot),
                     queue::QUEUE,
                     Direction::Right,
                     Direction::Right,
@@ -141,13 +154,12 @@ impl Worker {
         }
     }
 
-    async fn run(&self, stop: Arc<AtomicBool>) {
-        let mut r = self.redis.clone();
+    async fn run(&self, mut r: ConnectionManager, slot: usize, stop: Arc<AtomicBool>) {
         while !stop.load(Ordering::SeqCst) {
             let popped: redis::RedisResult<Option<String>> = r
                 .blmove(
                     queue::QUEUE,
-                    self.processing_key(),
+                    self.processing_key(slot),
                     Direction::Right,
                     Direction::Left,
                     2.0,
@@ -183,7 +195,7 @@ impl Worker {
                 }
                 None => warn!(%raw, "dropping malformed job"),
             }
-            let _: redis::RedisResult<usize> = r.lrem(self.processing_key(), 1, &raw).await;
+            let _: redis::RedisResult<usize> = r.lrem(self.processing_key(slot), 1, &raw).await;
         }
     }
 

@@ -80,5 +80,8 @@ cargo run -p acc-judge -- --lang python3 --code sol.py --tests ./bench --time 10
 
 - 운영 go-judge에 `cargo test -p acc-judge` 공격 테스트를 다시 돌립니다(`GO_JUDGE_URL`을 VM 내부 주소로).
 - 부하 테스트로 `QUEUE_LIMIT`을 정합니다: 대기열이 이 길이를 넘으면 제출을 잠시 거절합니다.
+  운영 DB가 아닌 복제본에서 `scripts/loadtest.sh <문제 번호> <사용자 id> 500`을 돌리면 초당 채점 수와
+  60초·120초 대기 기준의 추천 값을 알려 줍니다. 개발 컨테이너(4코어 x86)에서 Python A+B(14케이스)는
+  슬롯 1개일 때 초당 약 1~2개, 슬롯 4개(`WORKER_CONCURRENCY=4`)일 때 초당 약 7개였습니다.
 - 약관 3종(`web/src/lib/legal/*.md`)의 `[…]` 자리를 채우고 게시합니다.
 - 공식 문제 50개(`problems/`)를 올리고 레벨을 확정합니다.
