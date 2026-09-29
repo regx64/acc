@@ -1,0 +1,10 @@
+/target
+node_modules/
+.svelte-kit/
+/web/build/
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
+/var/
