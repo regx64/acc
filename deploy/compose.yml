@@ -1,0 +1,95 @@
+# Production stack on the Oracle A1 VM. Same services as compose.dev.yml,
+# plus the API, worker, backups and the Cloudflare tunnel. Nothing listens
+# on a public port: traffic arrives through cloudflared.
+#
+#   cd /opt/acc && docker compose pull && docker compose up -d
+name: acc
+x-app: &app
+  image: ghcr.io/regx64/acc:${ACC_TAG:-latest}
+  env_file: .env
+  restart: unless-stopped
+  depends_on:
+    postgres: {condition: service_healthy}
+    redis: {condition: service_started}
+
+services:
+  postgres:
+    image: postgres:16-bookworm
+    environment:
+      POSTGRES_USER: acc
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: acc
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "acc"]
+      interval: 5s
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-bookworm
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "512mb", "--maxmemory-policy", "noeviction"]
+    volumes: [redisdata:/data]
+    restart: unless-stopped
+
+  go-judge:
+    image: ghcr.io/regx64/acc-go-judge:${ACC_TAG:-latest}
+    privileged: true
+    shm_size: 1g
+    environment:
+      ES_PARALLELISM: ${JUDGE_PARALLELISM:-2}
+    volumes: ["cache:/var/cache/acc:ro"]
+    restart: unless-stopped
+
+  api:
+    <<: *app
+    command: ["acc-api"]
+    environment:
+      BIND: 0.0.0.0:8080
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8080/api/v1/health"]
+      interval: 10s
+
+  worker:
+    <<: *app
+    command: ["acc-worker"]
+    environment:
+      GO_JUDGE_URL: http://go-judge:5050
+      GO_JUDGE_PATH: /usr/local/rust-bin:/usr/local/bin:/usr/bin:/bin
+      CACHE_DIR: /var/cache/acc
+      JUDGE_CACHE_DIR: /var/cache/acc
+    volumes: ["cache:/var/cache/acc"]
+    depends_on:
+      postgres: {condition: service_healthy}
+      redis: {condition: service_started}
+      go-judge: {condition: service_started}
+    # A deploy waits for the submission in hand to finish.
+    stop_grace_period: 5m
+
+  backup:
+    image: ghcr.io/regx64/acc-backup:${ACC_TAG:-latest}
+    environment:
+      PGHOST: postgres
+      PGUSER: acc
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: acc
+      S3_ENDPOINT: ${R2_ENDPOINT}
+      S3_ACCESS_KEY: ${R2_ACCESS_KEY_ID}
+      S3_SECRET_KEY: ${R2_SECRET_ACCESS_KEY}
+      S3_BUCKET: ${R2_BACKUP_BUCKET:-acc-backups}
+      ALERT_WEBHOOK_URL: ${ALERT_WEBHOOK_URL:-}
+    depends_on:
+      postgres: {condition: service_healthy}
+    restart: unless-stopped
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    command: ["tunnel", "--no-autoupdate", "run"]
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:?set CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on: [api]
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  redisdata:
+  cache:

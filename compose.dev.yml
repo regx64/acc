@@ -1,0 +1,52 @@
+# Local services: Postgres, Redis, go-judge and MinIO (stands in for R2).
+# The API, worker and web app run natively (see README).
+#
+#   docker compose -f compose.dev.yml up -d
+name: acc-dev
+services:
+  postgres:
+    image: postgres:16-bookworm
+    environment:
+      POSTGRES_USER: acc
+      POSTGRES_PASSWORD: acc
+      POSTGRES_DB: acc
+    ports: ["127.0.0.1:5432:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "acc"]
+      interval: 5s
+
+  redis:
+    image: redis:7-bookworm
+    command: ["redis-server", "--appendonly", "yes"]
+    ports: ["127.0.0.1:6379:6379"]
+    volumes: [redisdata:/data]
+
+  go-judge:
+    build: deploy/go-judge
+    image: acc-go-judge:dev
+    privileged: true
+    shm_size: 512m
+    ports: ["127.0.0.1:5050:5050"]
+    # The worker writes test data here; go-judge reads inputs by path.
+    volumes: ["./var/cache:/var/cache/acc:ro"]
+
+  minio:
+    image: minio/minio:latest
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: acc
+      MINIO_ROOT_PASSWORD: acc-dev-secret
+    ports: ["127.0.0.1:9000:9000", "127.0.0.1:9001:9001"]
+    volumes: [miniodata:/data]
+
+  minio-init:
+    image: minio/mc:latest
+    depends_on: [minio]
+    entrypoint: ["/bin/sh", "-c", "until mc alias set local http://minio:9000 acc acc-dev-secret; do sleep 1; done; mc mb --ignore-existing local/acc"]
+    restart: "no"
+
+volumes:
+  pgdata:
+  redisdata:
+  miniodata:
