@@ -1,0 +1,5 @@
+title = "토끼 개체 수 예측"
+time_limit_ms = 1000
+memory_limit_mb = 256
+level = 16
+solution = "sol.py"

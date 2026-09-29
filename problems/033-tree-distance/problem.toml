@@ -1,0 +1,5 @@
+title = "가계도 촌수 계산"
+time_limit_ms = 2000
+memory_limit_mb = 256
+level = 18
+solution = "sol.cpp"

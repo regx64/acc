@@ -1,0 +1,5 @@
+title = "소수 세기"
+time_limit_ms = 2000
+memory_limit_mb = 256
+level = 7
+solution = "sol.py"

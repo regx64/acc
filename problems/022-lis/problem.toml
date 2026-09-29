@@ -1,0 +1,5 @@
+title = "점점 높아지는 발자국"
+time_limit_ms = 1000
+memory_limit_mb = 256
+level = 12
+solution = "sol.py"

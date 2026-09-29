@@ -1,0 +1,5 @@
+title = "주식 최저가 조회"
+time_limit_ms = 2000
+memory_limit_mb = 256
+level = 16
+solution = "sol.cpp"

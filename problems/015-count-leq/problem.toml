@@ -1,0 +1,5 @@
+title = "놀이기구 키 제한"
+time_limit_ms = 1000
+memory_limit_mb = 256
+level = 7
+solution = "sol.py"

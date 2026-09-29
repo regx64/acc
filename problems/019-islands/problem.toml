@@ -1,0 +1,5 @@
+title = "섬의 개수"
+time_limit_ms = 1000
+memory_limit_mb = 256
+level = 9
+solution = "sol.py"

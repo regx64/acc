@@ -1,0 +1,5 @@
+title = "계단 그리기"
+time_limit_ms = 1000
+memory_limit_mb = 256
+level = 2
+solution = "sol.py"

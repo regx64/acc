@@ -1,0 +1,5 @@
+title = "서로 오갈 수 있는 도시들"
+time_limit_ms = 1500
+memory_limit_mb = 256
+level = 18
+solution = "sol.cpp"

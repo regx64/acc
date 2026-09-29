@@ -1,0 +1,5 @@
+title = "반장 선거"
+time_limit_ms = 1000
+memory_limit_mb = 256
+level = 5
+solution = "sol.py"

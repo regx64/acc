@@ -1,0 +1,5 @@
+title = "뒤바뀐 순위"
+time_limit_ms = 1000
+memory_limit_mb = 256
+level = 17
+solution = "sol.py"

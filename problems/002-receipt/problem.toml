@@ -1,0 +1,5 @@
+title = "사칙연산 영수증"
+time_limit_ms = 1000
+memory_limit_mb = 256
+level = 1
+solution = "sol.py"

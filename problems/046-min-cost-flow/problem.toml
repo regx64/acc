@@ -1,0 +1,5 @@
+title = "택배 트럭 배차"
+time_limit_ms = 2000
+memory_limit_mb = 256
+level = 24
+solution = "sol.cpp"

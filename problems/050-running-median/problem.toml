@@ -1,0 +1,5 @@
+title = "실시간 중간 점수"
+time_limit_ms = 1500
+memory_limit_mb = 256
+level = 14
+solution = "sol.py"

@@ -1,0 +1,5 @@
+title = "일주일 최고 기온"
+time_limit_ms = 1500
+memory_limit_mb = 256
+level = 12
+solution = "sol.py"

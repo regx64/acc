@@ -1,0 +1,5 @@
+title = "동그랗게 앉아 술래 뽑기"
+time_limit_ms = 2000
+memory_limit_mb = 256
+level = 8
+solution = "sol.py"

@@ -1,0 +1,5 @@
+title = "축제 부스 배치"
+time_limit_ms = 1500
+memory_limit_mb = 256
+level = 23
+solution = "sol.cpp"

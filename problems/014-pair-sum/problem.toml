@@ -1,0 +1,5 @@
+title = "합이 K인 짝"
+time_limit_ms = 1000
+memory_limit_mb = 256
+level = 8
+solution = "sol.py"

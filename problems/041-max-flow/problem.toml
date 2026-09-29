@@ -1,0 +1,5 @@
+title = "송수관 최대 유량"
+time_limit_ms = 2000
+memory_limit_mb = 256
+level = 22
+solution = "sol.cpp"

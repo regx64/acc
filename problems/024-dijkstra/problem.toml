@@ -1,0 +1,5 @@
+title = "택배 최단 경로"
+time_limit_ms = 2000
+memory_limit_mb = 256
+level = 13
+solution = "sol.cpp"

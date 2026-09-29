@@ -1,0 +1,5 @@
+title = "고속도로 휴게소 공사"
+time_limit_ms = 1000
+memory_limit_mb = 256
+level = 26
+solution = "sol.cpp"

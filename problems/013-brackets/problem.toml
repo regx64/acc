@@ -1,0 +1,5 @@
+title = "괄호 짝 맞추기"
+time_limit_ms = 1000
+memory_limit_mb = 256
+level = 6
+solution = "sol.py"

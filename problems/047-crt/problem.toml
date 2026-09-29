@@ -1,0 +1,5 @@
+title = "톱니바퀴 맞물림"
+time_limit_ms = 1000
+memory_limit_mb = 256
+level = 21
+solution = "sol.py"

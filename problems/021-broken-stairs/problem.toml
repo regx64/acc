@@ -1,0 +1,5 @@
+title = "부서진 계단"
+time_limit_ms = 1000
+memory_limit_mb = 256
+level = 11
+solution = "sol.py"

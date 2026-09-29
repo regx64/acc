@@ -1,0 +1,5 @@
+title = "캠핑 배낭 싸기"
+time_limit_ms = 1000
+memory_limit_mb = 256
+level = 12
+solution = "sol.cpp"
