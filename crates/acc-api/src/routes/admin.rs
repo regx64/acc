@@ -19,8 +19,8 @@ use crate::state::AppState;
 pub fn router() -> OpenApiRouter<AppState> {
     OpenApiRouter::new()
         .routes(routes!(overview))
-        .routes(routes!(list_problems))
-        .routes(routes!(update_problem))
+        .routes(routes!(admin_list_problems))
+        .routes(routes!(admin_update_problem))
         .routes(routes!(decide))
         .routes(routes!(rejudge_problem))
         .routes(routes!(rejudge_submission))
@@ -117,7 +117,7 @@ pub struct AdminProblemQuery {
 }
 
 #[utoipa::path(get, path = "/admin/problems", tag = "admin", params(AdminProblemQuery), responses((status = 200, body = Vec<AdminProblemRow>)))]
-async fn list_problems(
+async fn admin_list_problems(
     State(s): State<AppState>,
     _: AdminUser,
     Query(q): Query<AdminProblemQuery>,
@@ -152,7 +152,7 @@ pub struct Recomputed {
 /// Changing the level or visibility recomputes every solver's rating.
 #[utoipa::path(patch, path = "/admin/problems/{id}", tag = "admin", params(("id" = i32, Path)), request_body = AdminProblemPatch,
     responses((status = 200, body = Recomputed)))]
-async fn update_problem(
+async fn admin_update_problem(
     State(s): State<AppState>,
     _: AdminUser,
     Path(id): Path<i32>,

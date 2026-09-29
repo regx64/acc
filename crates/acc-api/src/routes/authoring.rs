@@ -264,17 +264,17 @@ async fn list_mine(
 }
 
 #[derive(Serialize, ToSchema)]
-pub struct Created {
+pub struct CreatedProblem {
     pub id: i32,
 }
 
 #[utoipa::path(post, path = "/my/problems", tag = "authoring", request_body = ProblemInput,
-    responses((status = 200, body = Created), (status = 400, body = crate::error::ErrorBody)))]
+    responses((status = 200, body = CreatedProblem), (status = 400, body = crate::error::ErrorBody)))]
 async fn create_problem(
     State(s): State<AppState>,
     ActiveUser(u): ActiveUser,
     Json(b): Json<ProblemInput>,
-) -> ApiResult<Json<Created>> {
+) -> ApiResult<Json<CreatedProblem>> {
     if !b.agree_terms && !u.is_admin() {
         return Err(ApiError::bad_request("출제 약관에 동의해야 합니다."));
     }
@@ -309,7 +309,7 @@ async fn create_problem(
     .fetch_one(&s.db)
     .await?;
     rebuild_testcases(&s, pid, &st.samples, vec![]).await?;
-    Ok(Json(Created { id: pid }))
+    Ok(Json(CreatedProblem { id: pid }))
 }
 
 #[derive(FromRow)]
